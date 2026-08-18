@@ -2,12 +2,12 @@
   "name": "groupme-snipe-bot-backend",
   "version": "1.0.0",
   "description": "Backend API + GroupMe webhook bot for the trumpet section snipe game",
-  "main": "src/server.js",
+  "main": "backend/src/server.js",
   "scripts": {
-    "start": "node src/server.js",
-    "dev": "node --watch src/server.js",
+    "start": "node backend/src/server.js",
+    "dev": "node --watch backend/src/server.js",
     "test": "cross-env NODE_ENV=test jest --runInBand",
-    "db:init": "node src/db/migrate.js"
+    "db:init": "node backend/src/db/migrate.js"
   },
   "engines": {
     "node": ">=22.5.0"
