@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Trumpet Section — Snipe Leaderboard</title>
+<meta name="description" content="Live standings for the trumpet section sniping game." />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  /* ---------- Design tokens ----------
+     Marching-band-brass palette: near-black field, brass-gold accent,
+     a crosshair-red reserved for the #1 spot only. Condensed display
+     face for scoreboard energy; monospace for the stat columns so
+     digits line up like an actual scoreboard.
+  */
+  :root {
+    --bg: #14161c;
+    --bg-raised: #1c1f27;
+    --line: #2b2f3a;
+    --text: #f2efe9;
+    --text-dim: #9195a1;
+    --brass: #d9a441;
+    --brass-dim: #9c7a37;
+    --crosshair: #d1543f;
+    --radius: 10px;
+  }
+
+  * { box-sizing: border-box; }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+  }
+
+  html, body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    min-height: 100vh;
+    background-image:
+      radial-gradient(circle at 50% -10%, rgba(217, 164, 65, 0.10), transparent 45%);
+  }
+
+  .wrap {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 48px 20px 80px;
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 36px;
+  }
+
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--brass);
+    margin: 0 0 10px;
+  }
+
+  h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-weight: 400;
+    font-size: clamp(40px, 9vw, 64px);
+    letter-spacing: 0.02em;
+    margin: 0 0 6px;
+    line-height: 1;
+  }
+
+  .season-name {
+    color: var(--text-dim);
+    font-size: 14px;
+    margin: 0;
+  }
+
+  /* Signature element: a crosshair reticle, echoing the game's premise
+     (secretly photographing your target). Used once, quietly, behind
+     the header — not decoration scattered everywhere. */
+  .reticle {
+    width: 46px;
+    height: 46px;
+    margin: 0 auto 14px;
+    opacity: 0.85;
+  }
+  .reticle circle, .reticle line {
+    stroke: var(--brass);
+    stroke-width: 1.4;
+    fill: none;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--bg-raised);
+    border-radius: var(--radius);
+    overflow: hidden;
+    border: 1px solid var(--line);
+  }
+
+  thead th {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    text-align: left;
+    font-weight: 500;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  thead th.num, tbody td.num { text-align: right; }
+
+  tbody td {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--line);
+    font-size: 15px;
+  }
+
+  tbody tr:last-child td { border-bottom: none; }
+
+  tbody tr.rank-1 { background: linear-gradient(90deg, rgba(217,164,65,0.10), transparent 60%); }
+
+  .rank-cell {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    color: var(--text-dim);
+    width: 44px;
+  }
+  tr.rank-1 .rank-cell { color: var(--crosshair); }
+  tr.rank-2 .rank-cell,
+  tr.rank-3 .rank-cell { color: var(--brass); }
+
+  .player-name { font-weight: 600; }
+
+  td.num, th.num {
+    font-family: 'JetBrains Mono', monospace;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .kd { color: var(--brass); font-weight: 700; }
+
+  .state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-dim);
+    border: 1px dashed var(--line);
+    border-radius: var(--radius);
+    font-size: 15px;
+  }
+  .state strong { color: var(--text); display: block; margin-bottom: 6px; font-size: 17px; }
+
+  footer {
+    text-align: center;
+    margin-top: 28px;
+    color: var(--text-dim);
+    font-size: 12px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  footer .dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #4caf6f;
+    margin-right: 6px;
+    position: relative;
+    top: -1px;
+  }
+  footer .dot.stale { background: #8a8f98; }
+
+  @media (max-width: 480px) {
+    thead th:nth-child(3), tbody td:nth-child(3) { display: none; } /* hide Deaths on tiny screens, keep K/D */
+  }
+</style>
+<script>window.SNIPE_BOT_API_BASE_URL = 'https://localhost:3000';</script>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <svg class="reticle" viewBox="0 0 46 46" aria-hidden="true">
+        <circle cx="23" cy="23" r="16" />
+        <circle cx="23" cy="23" r="2" fill="currentColor" style="fill:#d9a441" />
+        <line x1="23" y1="0" x2="23" y2="10" />
+        <line x1="23" y1="36" x2="23" y2="46" />
+        <line x1="0" y1="23" x2="10" y2="23" />
+        <line x1="36" y1="23" x2="46" y2="23" />
+      </svg>
+      <p class="eyebrow">Trumpet Section</p>
+      <h1>Snipe Leaderboard</h1>
+      <p class="season-name" id="season-name">Loading season…</p>
+    </header>
+
+    <main id="content">
+      <div class="state"><strong>Loading standings…</strong>Fetching the latest snipe data.</div>
+    </main>
+
+    <footer>
+      <span class="dot" id="status-dot"></span><span id="status-text">connecting…</span>
+    </footer>
+  </div>
+
+  <script>
+    // Point this at your deployed backend. During local development this
+    // defaults to the backend's default local port.
+    const API_BASE_URL = window.SNIPE_BOT_API_BASE_URL || 'http://localhost:3000';
+    const REFRESH_MS = 20000;
+
+    const contentEl = document.getElementById('content');
+    const seasonNameEl = document.getElementById('season-name');
+    const statusDot = document.getElementById('status-dot');
+    const statusText = document.getElementById('status-text');
+
+    function medal(rank) {
+      if (rank === 1) return '🎯';
+      if (rank === 2) return '🥈';
+      if (rank === 3) return '🥉';
+      return '';
+    }
+
+    function render(data) {
+      seasonNameEl.textContent = data.game ? data.game.name : '';
+
+      if (!data.leaderboard || data.leaderboard.length === 0) {
+        contentEl.innerHTML = `
+          <div class="state">
+            <strong>No snipes recorded yet</strong>
+            Get a photo, @ mention your target, and say "sniped" in the group chat.
+          </div>`;
+        return;
+      }
+
+      const rows = data.leaderboard.map((row) => `
+        <tr class="rank-${row.rank}">
+          <td class="rank-cell">${medal(row.rank) || row.rank}</td>
+          <td class="player-name">${escapeHtml(row.displayName)}</td>
+          <td class="num">${row.deaths}</td>
+          <td class="num">${row.kills}</td>
+          <td class="num kd">${row.kd.toFixed(2)}</td>
+        </tr>
+      `).join('');
+
+      contentEl.innerHTML = `
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Player</th>
+              <th class="num">Deaths</th>
+              <th class="num">Kills</th>
+              <th class="num">K/D</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      `;
+    }
+
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    async function loadLeaderboard() {
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/leaderboard`);
+        if (!res.ok) throw new Error(`Request failed: ${res.status}`);
+        const data = await res.json();
+        render(data);
+        statusDot.className = '';
+        statusText.textContent = `updated ${new Date().toLocaleTimeString()}`;
+      } catch (err) {
+        statusDot.className = 'dot stale';
+        statusText.textContent = 'unable to reach server';
+        if (contentEl.querySelector('table') === null) {
+          contentEl.innerHTML = `
+            <div class="state">
+              <strong>Couldn't load the leaderboard</strong>
+              Check that the backend API is running and reachable at ${escapeHtml(API_BASE_URL)}.
+            </div>`;
+        }
+      }
+    }
+
+    loadLeaderboard();
+    setInterval(loadLeaderboard, REFRESH_MS);
+  </script>
+</body>
+</html>

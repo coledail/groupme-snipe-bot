@@ -1,0 +1,22 @@
+# Render service descriptor (template). Replace placeholders as needed.
+services:
+  - type: web
+    name: groupme-snipe-bot-backend
+    env: node
+    region: oregon
+    plan: starter
+    branch: main
+    repo: .
+    buildCommand: cd backend && npm install
+    startCommand: cd backend && npm run db:init && npm start
+    autoDeploy: true
+    disk:
+      - name: snipe-data
+        size_gb: 1
+        mount_path: /data
+
+cronJobs:
+  - name: db-backup
+    schedule: "0 3 * * *" # daily at 03:00 UTC
+    command: bash ./scripts/backup_db.sh
+    shell: true
