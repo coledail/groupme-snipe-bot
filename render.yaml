@@ -10,10 +10,15 @@ services:
     buildCommand: cd backend && npm install
     startCommand: cd backend && npm run db:init && npm start
     autoDeploy: true
-    disk:
-      - name: snipe-data
-        size_gb: 1
-        mount_path: /data
+    # For production with persistent storage, attach a disk and set DATABASE_PATH.
+    # For free-tier without disk, use a managed Postgres and set DATABASE_URL in Render environment.
+    envVars:
+      - key: DATABASE_URL
+        # Set this to your Postgres connection string (e.g. from Supabase or Neon).
+        value: ""
+      - key: DATABASE_PATH
+        # If you attach a disk and want to use SQLite, set this (e.g. /data/dev.db).
+        value: ""
 
 cronJobs:
   - name: db-backup

@@ -3,18 +3,18 @@ function createPlayerService(playerRepository) {
     if (!groupmeUserId) {
       throw new Error('groupmeUserId is required');
     }
-    return playerRepository.upsert(groupmeUserId, displayName || 'Unknown');
+    return await playerRepository.upsert(groupmeUserId, displayName || 'Unknown');
   }
 
   async function getPlayerByGroupmeId(groupmeUserId) {
-    return playerRepository.findByGroupmeId(groupmeUserId);
+    return await playerRepository.findByGroupmeId(groupmeUserId);
   }
 
   async function updatePlayer(id, data) {
     if (data.displayName === undefined) {
-      return playerRepository.findById(id);
+      return await playerRepository.findById(id);
     }
-    return playerRepository.updateDisplayName(id, data.displayName);
+    return await playerRepository.updateDisplayName(id, data.displayName);
   }
 
   return { findOrCreatePlayer, getPlayerByGroupmeId, updatePlayer };

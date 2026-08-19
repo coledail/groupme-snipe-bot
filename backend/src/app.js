@@ -16,12 +16,12 @@ const createAdminRouter = require('./routes/admin');
 const createWebhookRouter = require('./routes/webhook');
 const createLeaderboardRouter = require('./routes/leaderboard');
 
-function createApp() {
+async function createApp() {
   const app = express();
   app.use(cors({ origin: config.corsOrigin }));
   app.use(bodyParser());
 
-  const db = openDatabase(config.databasePath);
+  const db = await openDatabase(config.databasePath);
 
   const playerRepository = createPlayerRepository(db);
   const snipeRepository = createSnipeRepository(db);

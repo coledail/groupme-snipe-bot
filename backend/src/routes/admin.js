@@ -25,7 +25,7 @@ function createAdminRouter({ snipeRepository, snipeService, gameService, playerS
 
   router.get('/snipes', async (req, res) => {
     const limit = Math.min(Number(req.query.limit) || 50, 200);
-    const snipes = snipeRepository.recent(limit);
+    const snipes = await snipeRepository.recent(limit);
     return res.status(200).json({ snipes });
   });
 

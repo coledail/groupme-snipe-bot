@@ -10,7 +10,7 @@ function createSnipeService(
       return null;
     }
 
-    if (snipeRepository.findByMessageId(message.id)) {
+    if (await snipeRepository.findByMessageId(message.id)) {
       return null;
     }
 
@@ -24,7 +24,7 @@ function createSnipeService(
       existingVictim ? existingVictim.displayName : 'Unknown',
     );
 
-    const snipe = snipeRepository.create({
+    const snipe = await snipeRepository.create({
       gameId: activeGame.id,
       sniperId: sniper.id,
       victimId: victim.id,
@@ -55,13 +55,13 @@ function createSnipeService(
   }
 
   async function undoSnipe(snipeId) {
-    return snipeRepository.undo(snipeId);
+    return await snipeRepository.undo(snipeId);
   }
 
   async function getLeaderboard(gameId) {
-    const kills = snipeRepository.killCountsByGame(gameId);
-    const deaths = snipeRepository.deathCountsByGame(gameId);
-    const players = playerRepository.all();
+    const kills = await snipeRepository.killCountsByGame(gameId);
+    const deaths = await snipeRepository.deathCountsByGame(gameId);
+    const players = await playerRepository.all();
 
     const killMap = new Map(kills.map((k) => [k.playerId, k.count]));
     const deathMap = new Map(deaths.map((d) => [d.playerId, d.count]));
