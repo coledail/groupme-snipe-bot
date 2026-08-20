@@ -36,7 +36,7 @@ function createSnipeService(
       return null;
     }
 
-    const confirmationText = `Snipe recorded: @${sniper.displayName} sniped @${victim.displayName}!`;
+    const confirmationText = `@${sniper.displayName} sniped @${victim.displayName}! Leaderboard: coles.studio/snipe`;
     return { snipe, confirmationText };
   }
 
