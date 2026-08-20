@@ -1,6 +1,11 @@
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 
+function parseCorsOrigins(value) {
+  if (!value) return ['*'];
+  return value.split(',').map((origin) => origin.trim()).filter(Boolean);
+}
+
 function required(name, { allowMissingInTest = false } = {}) {
   const value = process.env[name];
   if (!value && process.env.NODE_ENV === 'test' && allowMissingInTest) {
@@ -21,5 +26,6 @@ module.exports = {
   groupmeGroupId: required('GROUPME_GROUP_ID', { allowMissingInTest: true }),
   adminApiToken: required('ADMIN_API_TOKEN', { allowMissingInTest: true }),
   corsOrigin: process.env.CORS_ORIGIN || '*',
+  corsOrigins: parseCorsOrigins(process.env.CORS_ORIGIN || '*'),
   groupmeApiBase: 'https://api.groupme.com/v3',
 };

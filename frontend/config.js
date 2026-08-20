@@ -1,0 +1,1 @@
+window.SNIPE_BOT_API_BASE_URL = 'https://groupme-snipe-bot.onrender.com';

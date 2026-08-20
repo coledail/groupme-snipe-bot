@@ -183,7 +183,7 @@
     thead th:nth-child(3), tbody td:nth-child(3) { display: none; } /* hide Deaths on tiny screens, keep K/D */
   }
 </style>
-<script>window.SNIPE_BOT_API_BASE_URL = 'https://localhost:3000';</script>
+<script src="./config.js"></script>
 </head>
 <body>
   <div class="wrap">
@@ -211,9 +211,10 @@
   </div>
 
   <script>
-    // Point this at your deployed backend. During local development this
-    // defaults to the backend's default local port.
-    const API_BASE_URL = window.SNIPE_BOT_API_BASE_URL || 'http://localhost:3000';
+    // In production, configure this in frontend/config.js.
+    // For local file/localhost preview, fall back to local API.
+    const isLocalHost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    const API_BASE_URL = window.SNIPE_BOT_API_BASE_URL || (isLocalHost ? 'http://localhost:3000' : '');
     const REFRESH_MS = 20000;
 
     const contentEl = document.getElementById('content');
@@ -273,6 +274,17 @@
     }
 
     async function loadLeaderboard() {
+      if (!API_BASE_URL) {
+        statusDot.className = 'dot stale';
+        statusText.textContent = 'backend not configured';
+        contentEl.innerHTML = `
+          <div class="state">
+            <strong>Backend URL is not configured</strong>
+            Set window.SNIPE_BOT_API_BASE_URL in frontend/config.js.
+          </div>`;
+        return;
+      }
+
       try {
         const res = await fetch(`${API_BASE_URL}/api/leaderboard`);
         if (!res.ok) throw new Error(`Request failed: ${res.status}`);

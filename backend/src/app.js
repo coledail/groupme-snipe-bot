@@ -18,7 +18,17 @@ const createLeaderboardRouter = require('./routes/leaderboard');
 
 async function createApp() {
   const app = express();
-  app.use(cors({ origin: config.corsOrigin }));
+  const allowedOrigins = new Set(config.corsOrigins || [config.corsOrigin || '*']);
+  const allowAllOrigins = allowedOrigins.has('*');
+
+  app.use(cors({
+    origin(origin, callback) {
+      if (allowAllOrigins || !origin || allowedOrigins.has(origin)) {
+        return callback(null, true);
+      }
+      return callback(null, false);
+    },
+  }));
   app.use(bodyParser());
 
   const db = await openDatabase(config.databasePath);
