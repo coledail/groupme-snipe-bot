@@ -30,10 +30,21 @@ async function createApp() {
   const playerService = createPlayerService(playerRepository);
   const gameService = createGameService(gameRepository);
 
-  // Simple sender that logs the outgoing message; replace with real GroupMe API client when available.
   async function sendGroupMeMessage(text) {
-    // eslint-disable-next-line no-console
-    console.log('Would send GroupMe message:', text);
+    if (!config.groupmeBotId) {
+      throw new Error('GROUPME_BOT_ID is not configured');
+    }
+
+    const response = await fetch(`${config.groupmeApiBase}/bots/post`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ bot_id: config.groupmeBotId, text }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`GroupMe API returned HTTP ${response.status}`);
+    }
+
     return true;
   }
 
