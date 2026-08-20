@@ -21,7 +21,7 @@ function createSnipeService(
     const existingVictim = await playerService.getPlayerByGroupmeId(detection.victimId);
     const victim = await playerService.findOrCreatePlayer(
       detection.victimId,
-      existingVictim ? existingVictim.displayName : 'Unknown',
+      existingVictim ? existingVictim.displayName : (detection.victimDisplayName || 'Unknown'),
     );
 
     const snipe = await snipeRepository.create({
