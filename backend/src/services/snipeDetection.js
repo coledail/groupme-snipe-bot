@@ -16,7 +16,7 @@ function detectSnipe(message) {
 
   // Prefer GroupMe structured mention metadata, then fall back to text mention.
   const victimIdFromMentionAttachment = mentionsAttachment ? mentionsAttachment.user_ids[0] : null;
-  const mentionMatch = (message.text || '').match(/@([^\n\r@]+?)(?=\s+sniped\b|$)/i);
+  const mentionMatch = (message.text || '').match(/@([^\n\r@]+?)(?=\s+(?:got\s+)?sniped\b|$)/i);
   const victimNameFromText = mentionMatch ? mentionMatch[1].trim() : null;
 
   // Best-effort IDs from common GroupMe payload fields.
