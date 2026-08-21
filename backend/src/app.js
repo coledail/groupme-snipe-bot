@@ -40,6 +40,24 @@ async function createApp() {
   const playerService = createPlayerService(playerRepository);
   const gameService = createGameService(gameRepository);
 
+  async function sendGroupMeMessage(text) {
+    if (!config.groupmeBotId) {
+      throw new Error('GROUPME_BOT_ID is not configured');
+    }
+
+    const response = await fetch(`${config.groupmeApiBase}/bots/post`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ bot_id: config.groupmeBotId, text }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`GroupMe API returned HTTP ${response.status}`);
+    }
+
+    return true;
+  }
+
   const snipeService = createSnipeService({ snipeRepository, playerRepository }, { playerService, gameService, sendGroupMeMessage });
 
   app.get('/health', (req, res) => res.status(200).json({ ok: true }));
