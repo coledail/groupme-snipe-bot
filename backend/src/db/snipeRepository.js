@@ -55,6 +55,14 @@ function createSnipeRepository(db) {
       const findByMessageIdStmt = db.prepare('SELECT * FROM snipes WHERE groupme_message_id = ?');
       return toSnipe(findByMessageIdStmt.get(groupmeMessageId));
     },
+    async findMostRecentUnundone() {
+      if (isPg) {
+        const res = await db.query('SELECT * FROM snipes WHERE undone = false ORDER BY created_at DESC, id DESC LIMIT 1');
+        return toSnipe(res.rows[0]);
+      }
+      const stmt = db.prepare('SELECT * FROM snipes WHERE undone = 0 ORDER BY created_at DESC, id DESC LIMIT 1');
+      return toSnipe(stmt.get());
+    },
     async undo(id) {
       if (isPg) {
         const res = await db.query('UPDATE snipes SET undone = true, undone_at = now() WHERE id = $1 RETURNING *', [id]);

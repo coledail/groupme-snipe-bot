@@ -2,7 +2,7 @@ const { detectSnipe } = require('./snipeDetection');
 
 function createSnipeService(
   { snipeRepository, playerRepository },
-  { playerService, gameService, sendGroupMeMessage },
+  { playerService, gameService },
 ) {
   async function processIncomingMessage(message) {
     const detection = detectSnipe(message);
@@ -36,22 +36,30 @@ function createSnipeService(
       return null;
     }
 
-    const confirmationText = `@${sniper.displayName} sniped @${victim.displayName}! Leaderboard: coles.studio/snipe`;
-    return { snipe, confirmationText };
+    return { snipe };
+  }
+
+  async function handleUnsnipeCommand(message) {
+    const text = typeof message?.text === 'string' ? message.text.trim() : '';
+    if (!/^!unsnipe\b/i.test(text)) {
+      return null;
+    }
+
+    const latestSnipe = await snipeRepository.findMostRecentUnundone();
+    if (!latestSnipe) {
+      return { ok: true, snipe: null };
+    }
+
+    const snipe = await snipeRepository.undo(latestSnipe.id);
+    return { ok: true, snipe };
   }
 
   async function handleIncomingMessage(message) {
-    const outcome = await processIncomingMessage(message);
-    if (!outcome) return null;
-
-    try {
-      await sendGroupMeMessage(outcome.confirmationText);
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error('Snipe was recorded, but sending the GroupMe confirmation message failed:', err);
+    const unsnipe = await handleUnsnipeCommand(message);
+    if (unsnipe) {
+      return unsnipe;
     }
-
-    return outcome;
+    return processIncomingMessage(message);
   }
 
   async function undoSnipe(snipeId) {
@@ -89,7 +97,7 @@ function createSnipeService(
     return rows.map((row, index) => ({ rank: index + 1, ...row }));
   }
 
-  return { processIncomingMessage, handleIncomingMessage, undoSnipe, getLeaderboard };
+  return { processIncomingMessage, handleIncomingMessage, handleUnsnipeCommand, undoSnipe, getLeaderboard };
 }
 
 module.exports = { createSnipeService };
