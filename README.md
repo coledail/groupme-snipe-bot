@@ -18,7 +18,8 @@ recorded, and a public leaderboard tracks kills, deaths, and K/D per season.
 - Detects valid snipes (photo + @mention + "sniped", sender ≠ victim).
 - Auto-enrolls players by their permanent GroupMe user ID (display-name
   changes never create duplicate players).
-- Records every snipe as an individual, immutable-by-default record — kills,
+- Records every snipe as an individual, append-only-by-default record — admin
+  undo is a soft delete — and kills,
   deaths, and K/D are always *calculated* from those records, never stored as
   counters that could drift out of sync.
 - Posts exactly one confirmation message per valid snipe, and stays silent
@@ -35,26 +36,22 @@ recorded, and a public leaderboard tracks kills, deaths, and K/D per season.
 groupme-snipe-bot/
 ├── backend/                 Node.js + Express API and GroupMe webhook
 │   ├── src/
-│   │   ├── db/               SQLite access layer (schema + repositories)
+│   │   ├── db/               SQLite/PostgreSQL access layer (schema + repositories)
 │   │   ├── services/         Business logic (detection, players, games, snipes)
 │   │   ├── routes/           HTTP routes (webhook, leaderboard, admin)
 │   │   ├── middleware/       Admin auth, rate limiting
 │   │   ├── app.js            Wires everything into an Express app
 │   │   └── server.js         Starts the HTTP server
-│   └── __tests__/            Jest test suite
+│   └── test/                 Jest test suite
 └── frontend/
     └── index.html            Single static file — the leaderboard website
 ```
 
-**Backend:** Node.js + Express. No ORM — the database layer uses Node's
-**built-in `node:sqlite` module** (stable in Node 22.5+), so there are zero
-extra dependencies or native binaries to install just to talk to the
-database. All SQL lives behind three small repository modules
-(`playerRepository`, `gameRepository`, `snipeRepository`) with a plain
-function-based interface. That isolation is deliberate: if you ever need to
-move to PostgreSQL (see [Deployment](#6-deployment) for when you'd need to),
-you reimplement those three files using a driver like `pg` with the same
-function names/shapes — nothing in `services/` or `routes/` has to change.
+**Backend:** Node.js + Express. No ORM — local development uses Node's
+**built-in `node:sqlite` module** (stable in Node 22.5+), while setting
+`DATABASE_URL` selects PostgreSQL through `pg`. All SQL lives behind three
+small repository modules (`playerRepository`, `gameRepository`,
+`snipeRepository`) with a plain function-based interface.
 
 **Frontend:** A single static `index.html` (HTML + CSS + vanilla JS, no
 build step, no framework). It polls the backend's `/api/leaderboard`
@@ -91,6 +88,7 @@ Backend config lives in `backend/.env` (copy from `backend/.env.example`).
 | Variable            | Description                                                              |
 |----------------------|---------------------------------------------------------------------------|
 | `DATABASE_PATH`     | Path to the SQLite file. Defaults to `backend/data/dev.db`.              |
+| `DATABASE_URL`      | Optional PostgreSQL connection string. When set, PostgreSQL is used instead of SQLite. |
 | `GROUPME_BOT_ID`    | Bot ID from dev.groupme.com (used to post confirmation messages).       |
 | `GROUPME_GROUP_ID`  | The trumpet section's GroupMe group ID (webhook payloads are checked against this). |
 | `ADMIN_API_TOKEN`   | Long random string. Required as a `Bearer` token on all `/api/admin/*` routes. |
@@ -132,8 +130,8 @@ around.
 ## 6. How to initialize the database
 
 The schema is applied automatically the first time the app touches the
-database (both `npm start` and `npm test` do this for you). To create the
-file explicitly ahead of time:
+database. To create the SQLite file or initialize PostgreSQL explicitly ahead
+of time:
 
 ```bash
 cd backend
@@ -164,7 +162,9 @@ curl http://localhost:3000/api/leaderboard
 
 ## 8. Running the frontend locally
 
-It's a static file — no build step. Either:
+It's a static file — no build step. Deploy both `frontend/index.html` and
+`frontend/config.js` so the production API URL is configured. For local use,
+either:
 
 - Open `frontend/index.html` directly in a browser, or
 - Serve it with any static server, e.g. `npx serve frontend`.
@@ -182,15 +182,13 @@ file):
 ## 9. Running tests
 
 ```bash
-cd backend
+cd groupme-snipe-bot
 npm test
 ```
 
-Tests use an in-memory SQLite database (`:memory:`) — nothing touches your
-real data, and no external services are called. Coverage includes snipe
-detection (valid/invalid cases, case-insensitivity, self-snipe rejection),
-player enrollment/no-duplicates, duplicate-webhook prevention, kill/death/K-D
-calculation, undo, and the HTTP routes (webhook, leaderboard, admin auth).
+The current Jest suite uses mocked repositories and does not touch the real
+database or external services. It currently covers the `!unsnipe` service
+command; broader integration coverage is still to be added.
 
 ---
 
@@ -198,20 +196,11 @@ calculation, undo, and the HTTP routes (webhook, leaderboard, admin auth).
 
 ### Backend
 
-The backend is a plain Node process — deploy it anywhere that gives you a
-**persistent filesystem or volume** (a small VPS, or a platform like Fly.io
-/ Railway / Render with a persistent volume attached). This matters because
-SQLite is a file on disk: on a platform with an *ephemeral* filesystem
-(classic serverless functions, many "container that resets on deploy"
-platforms), your data would be silently wiped on every restart.
-
-**If your target platform can't give you persistent disk storage:** don't
-use SQLite there. Instead, provision a small hosted PostgreSQL instance
-(e.g. your platform's managed Postgres, Neon, Supabase, RDS) and reimplement
-`src/db/playerRepository.js`, `gameRepository.js`, and `snipeRepository.js`
-using the `pg` package, keeping the same exported function names — nothing
-in `services/` or `routes/` needs to change. This is called out explicitly
-because the spec asked us not to silently assume SQLite works everywhere.
+The backend is a plain Node process. For SQLite, deploy it somewhere that
+gives you a **persistent filesystem or volume**; otherwise configure
+`DATABASE_URL` for a hosted PostgreSQL instance such as Neon, Supabase, or
+RDS. The application selects PostgreSQL automatically when `DATABASE_URL` is
+set.
 
 General steps for a VPS-style host:
 ```bash
@@ -237,15 +226,10 @@ it from the same box as the backend via nginx). Set
 to your backend's public URL first.
 
 ### Checklist
-- [ ] Backend deployed somewhere with persistent storage (or Postgres, per above)
-- [ ] `.env` configured on the server, **not committed to git**
-- [ ] GroupMe bot's callback URL points at `https://<backend>/webhook/groupme`
-- [ ] Frontend's `API_BASE_URL` points at the backend's public URL
-- [ ] `CORS_ORIGIN` on the backend matches the frontend's real URL
 
 ---
 
-## 11. Admin operations
+ move to PostgreSQL (see [Deployment](#10-deployment) for deployment details),
 
 All admin endpoints require `Authorization: Bearer <ADMIN_API_TOKEN>`.
 

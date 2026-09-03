@@ -1,7 +1,10 @@
 const express = require('express');
+const { publicLimiter } = require('../middleware/rateLimiter');
 
 function createWebhookRouter({ snipeService }) {
   const router = express.Router();
+
+  router.use(publicLimiter);
 
   router.post('/groupme', async (req, res) => {
     // GroupMe webhook payload may wrap the message; accept either shape.
@@ -9,7 +12,7 @@ function createWebhookRouter({ snipeService }) {
     try {
       const outcome = await snipeService.handleIncomingMessage(message);
       if (!outcome) return res.status(204).end();
-      return res.status(200).json({ ok: true, snipe: outcome.snipe });
+      return res.status(200).json({ ok: true, snipe: outcome.snipe, snipes: outcome.snipes || [outcome.snipe] });
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error('Error handling webhook:', err);

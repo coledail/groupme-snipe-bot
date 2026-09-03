@@ -2,9 +2,13 @@ const { detectSnipe } = require('./snipeDetection');
 
 function createSnipeService(
   { snipeRepository, playerRepository },
-  { playerService, gameService },
+  { playerService, gameService, groupmeGroupId },
 ) {
   async function processIncomingMessage(message) {
+    if (groupmeGroupId && String(message?.group_id) !== String(groupmeGroupId)) {
+      return null;
+    }
+
     const detection = detectSnipe(message);
     if (!detection.valid) {
       return null;
@@ -18,27 +22,32 @@ function createSnipeService(
 
     const sniper = await playerService.findOrCreatePlayer(detection.sniperId, message.name);
 
-    const existingVictim = await playerService.getPlayerByGroupmeId(detection.victimId);
-    const victim = await playerService.findOrCreatePlayer(
-      detection.victimId,
-      existingVictim ? existingVictim.displayName : (detection.victimDisplayName || 'Unknown'),
-    );
+    const snipes = [];
+    for (const victimId of detection.victimIds || [detection.victimId]) {
+      const existingVictim = await playerService.getPlayerByGroupmeId(victimId);
+      const victim = await playerService.findOrCreatePlayer(
+        victimId,
+        existingVictim ? existingVictim.displayName : (detection.victimDisplayName || 'Unknown'),
+      );
 
-    const snipe = await snipeRepository.create({
-      gameId: activeGame.id,
-      sniperId: sniper.id,
-      victimId: victim.id,
-      groupmeMessageId: message.id,
-      imageUrl: detection.imageUrl,
-    });
+      const snipe = await snipeRepository.create({
+        gameId: activeGame.id,
+        sniperId: sniper.id,
+        victimId: victim.id,
+        groupmeMessageId: message.id,
+        imageUrl: detection.imageUrl,
+      });
+      if (snipe) snipes.push(snipe);
+    }
 
-    if (!snipe) {
+    if (snipes.length === 0) {
       return null;
     }
 
-    return { snipe };
+    return { snipe: snipes[0], snipes };
   }
 
+  // Unsnipe behavior meant for all users regardless of permission
   async function handleUnsnipeCommand(message) {
     const text = typeof message?.text === 'string' ? message.text.trim() : '';
     if (!/^!unsnipe\b/i.test(text)) {

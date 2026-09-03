@@ -72,7 +72,7 @@ function createAdminRouter({ snipeRepository, snipeService, gameService, playerS
       const player = await playerService.updatePlayer(id, { displayName });
       return res.status(200).json({ ok: true, player });
     } catch (err) {
-      if (err.code === 'P2025') {
+      if (err.code === 'P2025' || err.code === 'NOT_FOUND') {
         return res.status(404).json({ error: 'Player not found' });
       }
       throw err;

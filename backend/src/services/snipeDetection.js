@@ -15,7 +15,7 @@ function detectSnipe(message) {
     : null;
 
   // Prefer GroupMe structured mention metadata, then fall back to text mention.
-  const victimIdFromMentionAttachment = mentionsAttachment ? mentionsAttachment.user_ids[0] : null;
+  const victimIdsFromMentionAttachment = mentionsAttachment ? [...new Set(mentionsAttachment.user_ids.map(String))] : [];
   const mentionMatch = (message.text || '').match(/@([^\n\r@]+?)(?=\s+(?:got\s+)?sniped\b|$)/i);
   const victimNameFromText = mentionMatch ? mentionMatch[1].trim() : null;
 
@@ -25,13 +25,19 @@ function detectSnipe(message) {
     ? attachments.find((a) => a && (a.type === 'image' || a.type === 'photo' || a.url || a.photo_url))
     : null;
   const imageUrl = imageAttachment ? (imageAttachment.url || imageAttachment.photo_url || null) : null;
-  const victimId = victimIdFromMentionAttachment || victimNameFromText;
+  const victimIds = victimIdsFromMentionAttachment.length > 0
+    ? victimIdsFromMentionAttachment
+    : (victimNameFromText ? [victimNameFromText] : []);
 
-  if (sniperId && victimIdFromMentionAttachment && String(sniperId) === String(victimIdFromMentionAttachment)) {
+  if (sniperId && victimIds.some((victimId) => String(sniperId) === String(victimId))) {
     return { valid: false };
   }
 
-  if (!victimId) {
+  if (victimNameFromText && message.name && victimNameFromText.trim().toLowerCase() === String(message.name).trim().toLowerCase()) {
+    return { valid: false };
+  }
+
+  if (victimIds.length === 0) {
     // Without a mention we can't attribute a victim reliably.
     return { valid: false };
   }
@@ -39,7 +45,8 @@ function detectSnipe(message) {
   return {
     valid: true,
     sniperId: String(sniperId || (message.name || 'unknown')),
-    victimId: String(victimId),
+    victimId: victimIds[0],
+    victimIds,
     victimDisplayName: victimNameFromText,
     imageUrl,
   };

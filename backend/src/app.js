@@ -40,6 +40,7 @@ async function createApp() {
   const playerService = createPlayerService(playerRepository);
   const gameService = createGameService(gameRepository);
 
+  // Disabled GroupMe messaging for now
   async function sendGroupMeMessage(text) {
     if (!config.groupmeBotId) {
       throw new Error('GROUPME_BOT_ID is not configured');
@@ -58,7 +59,10 @@ async function createApp() {
     return true;
   }
 
-  const snipeService = createSnipeService({ snipeRepository, playerRepository }, { playerService, gameService, sendGroupMeMessage });
+  const snipeService = createSnipeService(
+    { snipeRepository, playerRepository },
+    { playerService, gameService, sendGroupMeMessage, groupmeGroupId: config.groupmeGroupId },
+  );
 
   app.get('/health', (req, res) => res.status(200).json({ ok: true }));
 
